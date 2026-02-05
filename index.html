@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <title>FinancePro | MKS Tech Solutions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        :root { 
+            --bg: #05010d; 
+            --accent: #8b5cf6; 
+            --glass: rgba(255, 255, 255, 0.015);
+            --border: rgba(255, 255, 255, 0.05);
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at 50% -20%, #1e103d 0%, #05010d 80%);
+            color: #f1f5f9; 
+            font-size: 13px;
+            letter-spacing: -0.01em;
+            min-height: 100vh;
+        }
+
+        .glass { 
+            background: var(--glass); 
+            backdrop-filter: blur(16px); 
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .premium-border {
+            position: relative;
+        }
+        .premium-border::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), transparent 50%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade { animation: fadeIn 0.5s ease forwards; }
+
+        .modal-blur { backdrop-filter: blur(12px); background: rgba(5, 1, 13, 0.85); }
+
+        @media (max-width: 640px) { 
+            .bottom-sheet { 
+                border-radius: 2.5rem 2.5rem 0 0 !important; 
+                position: fixed; 
+                bottom: 0; 
+                left: 0; 
+                right: 0; 
+                margin: 0 !important; 
+                transform: translateY(0);
+                transition: transform 0.3s ease-out;
+            } 
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2d1b4d; border-radius: 10px; }
+    </style>
+</head>
+<body class="pb-24">
+
+    <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-gradient-to-tr from-violet-600 to-fuchsia-600 rounded-xl flex items-center justify-center shadow-xl shadow-violet-500/20">
+                <i data-lucide="component" class="text-white w-5 h-5"></i>
+            </div>
+            <div>
+                <span class="block font-black text-sm tracking-tighter uppercase leading-none">Finance<span class="text-violet-500">Pro</span></span>
+                <span class="text-[8px] font-bold opacity-40 tracking-[0.2em] uppercase">Private Banking</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <select id="filterMonth" class="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-[10px] font-black outline-none text-violet-300 cursor-pointer hover:bg-white/10 transition">
+                <option value="all" class="bg-[#0b051a]">GERAL</option>
+                <option value="0" class="bg-[#0b051a]">JANEIRO</option><option value="1" class="bg-[#0b051a]">FEVEREIRO</option>
+                <option value="2" class="bg-[#0b051a]">MARÇO</option><option value="3" class="bg-[#0b051a]">ABRIL</option>
+                <option value="4" class="bg-[#0b051a]">MAIO</option><option value="5" class="bg-[#0b051a]">JUNHO</option>
+                <option value="6" class="bg-[#0b051a]">JULHO</option><option value="7" class="bg-[#0b051a]">AGOSTO</option>
+                <option value="8" class="bg-[#0b051a]">SETEMBRO</option><option value="9" class="bg-[#0b051a]">OUTUBRO</option>
+                <option value="10" class="bg-[#0b051a]">NOVEMBRO</option><option value="11" class="bg-[#0b051a]">DEZEMBRO</option>
+            </select>
+            <button id="downloadPDF" class="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/10 hover:bg-violet-600 transition-all group">
+                <i data-lucide="file-text" class="w-4 h-4 opacity-60 group-hover:opacity-100 group-hover:scale-110 transition"></i>
+            </button>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto px-4 mt-8">
+        
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="glass premium-border p-5 rounded-[2rem] animate-fade" style="animation-delay: 0.1s">
+                <div class="flex items-center gap-2 mb-3 opacity-40">
+                    <i data-lucide="trending-up" class="w-3 h-3"></i>
+                    <p class="text-[9px] font-black uppercase tracking-widest">Receitas</p>
+                </div>
+                <h3 id="total-receitas" class="text-xl font-bold text-white">R$ 0,00</h3>
+                <p class="text-[10px] text-emerald-500 font-bold mt-1">+ Fluxo Positivo</p>
+            </div>
+            
+            <div class="glass premium-border p-5 rounded-[2rem] animate-fade" style="animation-delay: 0.2s">
+                <div class="flex items-center gap-2 mb-3 opacity-40">
+                    <i data-lucide="trending-down" class="w-3 h-3"></i>
+                    <p class="text-[9px] font-black uppercase tracking-widest">Despesas</p>
+                </div>
+                <h3 id="total-despesas" class="text-xl font-bold text-rose-500">R$ 0,00</h3>
+                <p class="text-[10px] text-rose-900 font-bold mt-1">Saída de Capital</p>
+            </div>
+
+            <div class="glass premium-border p-5 rounded-[2rem] bg-gradient-to-br from-violet-600/10 to-transparent animate-fade" style="animation-delay: 0.3s">
+                <div class="flex items-center gap-2 mb-3 opacity-40">
+                    <i data-lucide="wallet" class="w-3 h-3"></i>
+                    <p class="text-[9px] font-black uppercase tracking-widest">Patrimônio</p>
+                </div>
+                <h3 id="saldo-geral" class="text-xl font-black text-white">R$ 0,00</h3>
+                <p id="label-balanco" class="text-[10px] opacity-40 font-bold mt-1">Disponível</p>
+            </div>
+
+            <div class="glass premium-border p-5 rounded-[2rem] animate-fade" style="animation-delay: 0.4s">
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-[9px] font-black uppercase tracking-widest opacity-40">Eficiência</p>
+                    <span id="savings-percent" class="text-[10px] font-black text-violet-400">0%</span>
+                </div>
+                <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden mb-2">
+                    <div id="savings-progress" class="bg-gradient-to-r from-violet-600 to-fuchsia-500 h-full transition-all duration-1000 shadow-[0_0_15px_rgba(139,92,246,0.5)]" style="width: 0%"></div>
+                </div>
+                <p class="text-[9px] opacity-30 font-bold">Taxa de Conversão/Economia</p>
+            </div>
+        </div>
+        
+        <div class="glass p-6 rounded-[2.5rem] animate-fade mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h4 class="text-[10px] font-black uppercase tracking-[0.2em] opacity-30">Análise de Tendência Tracejada</h4>
+                    <p class="text-[9px] opacity-20 font-bold mt-1 uppercase">Variação de Fluxo no Tempo</p>
+                </div>
+            </div>
+            <div class="h-[200px] w-full">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div class="lg:col-span-2 glass p-6 rounded-[2.5rem] animate-fade">
+                <div class="flex justify-between items-center mb-6">
+                    <h4 class="text-[10px] font-black uppercase tracking-[0.2em] opacity-30">Performance Mensal</h4>
+                    <div class="flex gap-4">
+                        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span><span class="text-[9px] font-bold opacity-50">IN</span></div>
+                        <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-violet-600"></span><span class="text-[9px] font-bold opacity-50">OUT</span></div>
+                    </div>
+                </div>
+                <div class="h-[240px]"><canvas id="barChart"></canvas></div>
+            </div>
+            
+            <div class="glass p-6 rounded-[2.5rem] animate-fade">
+                <h4 class="text-[10px] font-black uppercase tracking-[0.2em] opacity-30 mb-6 text-center">Alocação de Recursos</h4>
+                <div class="h-[200px] w-full relative">
+                    <canvas id="doughnutChart"></canvas>
+                </div>
+                <div id="chart-legend" class="mt-6 grid grid-cols-2 gap-y-3 gap-x-2"></div>
+            </div>
+        </div>
+
+        <div class="glass rounded-[2.5rem] overflow-hidden animate-fade shadow-2xl">
+            <div class="p-6 flex justify-between items-center border-b border-white/5">
+                <div>
+                    <h4 class="font-black text-xs uppercase tracking-widest">Timeline Financeira</h4>
+                    <p class="text-[9px] opacity-30 font-bold uppercase mt-1">Auditado em Tempo Real</p>
+                </div>
+                <div id="loading-spinner" class="hidden h-8 w-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10">
+                    <div class="w-4 h-4 border-2 border-violet-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left" id="mainTable">
+                    <tbody id="table-body" class="divide-y divide-white/[0.03]"></tbody>
+                </table>
+            </div>
+            <div id="empty-state" class="hidden py-20 text-center">
+                <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
+                    <i data-lucide="layers" class="w-6 h-6 opacity-20"></i>
+                </div>
+                <p class="text-[10px] font-black uppercase tracking-widest opacity-20">Nenhum registro encontrado</p>
+            </div>
+        </div>
+    </main>
+
+    <button id="openModal" class="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-tr from-violet-600 to-fuchsia-600 text-white rounded-2xl shadow-2xl shadow-violet-900/40 flex items-center justify-center transition-all hover:scale-110 hover:rotate-90 active:scale-95 z-40 group">
+        <i data-lucide="plus" class="w-7 h-7 group-hover:scale-125 transition"></i>
+    </button>
+
+    <div id="modal" class="fixed inset-0 modal-blur hidden items-center justify-center z-[60] p-4">
+        <div class="glass bottom-sheet w-full max-w-sm p-8 rounded-[3rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] relative border border-white/10">
+            <div class="w-12 h-1 bg-white/10 rounded-full mx-auto mb-8 sm:hidden"></div>
+
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-xl font-black tracking-tighter">Novo Lançamento</h2>
+                    <p class="text-[10px] opacity-40 font-bold uppercase tracking-widest">Protocolo de Entrada</p>
+                </div>
+                <button id="closeModal" class="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-rose-500/20 transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <form id="finance-form" class="space-y-5">
+                <div class="relative group">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 rounded-2xl opacity-20 group-focus-within:opacity-100 transition duration-500 blur"></div>
+                    <div class="relative bg-[#0b051a] rounded-2xl p-4">
+                        <label class="text-[9px] font-black uppercase opacity-40 block mb-2 text-center">Montante (BRL)</label>
+                        <input type="number" step="0.01" id="valor" placeholder="0,00" required 
+                               class="w-full bg-transparent text-4xl font-black outline-none text-center placeholder:opacity-10 text-white">
+                    </div>
+                </div>
+                
+                <div class="space-y-2">
+                    <label class="text-[9px] font-black uppercase opacity-40 ml-1 tracking-widest">Identificação</label>
+                    <input type="text" id="descricao" placeholder="Ex: Investimento Digital" required 
+                           class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl outline-none focus:border-violet-500 focus:bg-white/[0.07] text-sm transition-all">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-black uppercase opacity-40 ml-1 tracking-widest">Natureza</label>
+                        <select id="tipo" class="w-full bg-[#0b051a] border border-white/10 p-4 rounded-2xl text-[10px] font-black outline-none hover:border-violet-500 transition cursor-pointer">
+                            <option value="Receita">ENTRADA</option>
+                            <option value="Despesa">SAÍDA</option>
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-black uppercase opacity-40 ml-1 tracking-widest">Segmento</label>
+                        <select id="categoria" class="w-full bg-[#0b051a] border border-white/10 p-4 rounded-2xl text-[10px] font-black outline-none hover:border-violet-500 transition cursor-pointer">
+                            <option>Salário</option><option>Alimentação</option><option>Lazer</option>
+                            <option>Transporte</option><option>Saúde</option><option>Fixos</option>
+                            <option>Outros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-save" class="w-full bg-violet-600 hover:bg-violet-500 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] shadow-xl shadow-violet-900/30 active:scale-95 transition-all mt-4">
+                    Confirmar Operação
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-8 left-1/2 -translate-x-1/2 glass border-emerald-500/50 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] hidden z-[100] animate-bounce">
+        <span class="text-emerald-500 mr-2">●</span> Sincronizado com a Nuvem
+    </div>
+
+    <script>
+        // URL da API (Script do Google Sheets)
+        const API_URL = "https://script.google.com/macros/s/AKfycbz_dkcKeNT1Es7ajocc-1dFqgjQ4Q25APk7hHtZyxPaIRMnbBoTmct-WNj233w8CiPA/exec"; 
+        
+        let rawData = [];
+        let dChart, bChart, lChart;
+
+        const catIcons = { 
+            "Alimentação": "utensils", "Salário": "briefcase", "Lazer": "sparkles", 
+            "Transporte": "navigation", "Saúde": "activity", "Fixos": "anchor", "Outros": "box"
+        };
+
+        const chartColors = ['#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444','#f472b6','#0ea5e9'];
+
+        window.onload = () => {
+            lucide.createIcons();
+            const cache = localStorage.getItem('fin_elite_v1');
+            if(cache) { 
+                rawData = JSON.parse(cache); 
+                renderUI(rawData); 
+            }
+            fetchData();
+            
+            document.getElementById('filterMonth').onchange = (e) => {
+                const val = e.target.value;
+                const filtered = val === 'all' ? rawData : rawData.filter(i => new Date(i.data).getMonth() === parseInt(val));
+                renderUI(filtered);
+            };
+        };
+
+        async function fetchData() {
+            document.getElementById('loading-spinner').classList.remove('hidden');
+            try {
+                const r = await fetch(API_URL);
+                const json = await r.json();
+                rawData = json;
+                localStorage.setItem('fin_elite_v1', JSON.stringify(rawData));
+                renderUI(rawData);
+            } catch(e) { 
+                console.error("Network Error", e); 
+            } finally { 
+                document.getElementById('loading-spinner').classList.add('hidden'); 
+            }
+        }
+
+        function renderUI(data) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            let rT = 0, dT = 0;
+            const cats = {}, trend = {};
+
+            if(!data || data.length === 0) {
+                document.getElementById('empty-state').classList.remove('hidden');
+            } else {
+                document.getElementById('empty-state').classList.add('hidden');
+                
+                // Ordenação e processamento
+                data.sort((a,b) => new Date(b.data) - new Date(a.data)).forEach(i => {
+                    const v = parseFloat(i.valor);
+                    const isR = i.tipo === "Receita";
+                    isR ? rT += v : dT += v;
+                    
+                    if(!isR) cats[i.categoria] = (cats[i.categoria] || 0) + v;
+                    
+                    const dateObj = new Date(i.data);
+                    const m = dateObj.toLocaleString('pt-br', {month: 'short'}).toUpperCase();
+                    if(!trend[m]) trend[m] = {r:0, d:0};
+                    isR ? trend[m].r += v : trend[m].d += v;
+
+                    tbody.innerHTML += `
+                        <tr class="group hover:bg-white/[0.03] transition-all duration-300">
+                            <td class="p-5 w-14">
+                                <div class="w-10 h-10 rounded-xl glass flex items-center justify-center group-hover:border-violet-500/50 transition-all">
+                                    <i data-lucide="${catIcons[i.categoria] || 'circle-ellipsis'}" class="w-4 h-4 opacity-40 group-hover:opacity-100 group-hover:text-violet-500"></i>
+                                </div>
+                            </td>
+                            <td class="py-5">
+                                <p class="font-bold text-[14px] text-white/90 group-hover:text-white">${i.descricao}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="text-[9px] px-2 py-0.5 rounded-md bg-white/5 border border-white/5 opacity-40 font-black uppercase tracking-widest">${i.categoria}</span>
+                                    <span class="text-[9px] opacity-20 font-bold">${dateObj.toLocaleDateString('pt-BR')}</span>
+                                </div>
+                            </td>
+                            <td class="py-5 text-right pr-6">
+                                <p class="text-[14px] font-black ${isR?'text-emerald-400':'text-rose-500'}">
+                                    ${isR?'+':'-'} ${v.toLocaleString('pt-br', {style: 'currency', currency: 'BRL'})}
+                                </p>
+                                <p class="text-[8px] opacity-20 font-black uppercase tracking-widest">${isR?'Liquidação':'Débito'}</p>
+                            </td>
+                        </tr>`;
+                });
+            }
+
+            document.getElementById('total-receitas').innerText = rT.toLocaleString('pt-br', {style: 'currency', currency: 'BRL'});
+            document.getElementById('total-despesas').innerText = dT.toLocaleString('pt-br', {style: 'currency', currency: 'BRL'});
+            document.getElementById('saldo-geral').innerText = (rT-dT).toLocaleString('pt-br', {style: 'currency', currency: 'BRL'});
+            
+            const pct = rT > 0 ? Math.min(100, Math.max(0, ((rT-dT)/rT)*100)) : 0;
+            document.getElementById('savings-progress').style.width = pct+'%';
+            document.getElementById('savings-percent').innerText = pct.toFixed(0)+'%';
+
+            updateCharts(cats, trend);
+            lucide.createIcons();
+        }
+
+        function updateCharts(cats, trend) {
+            const cD = document.getElementById('doughnutChart').getContext('2d');
+            const cB = document.getElementById('barChart').getContext('2d');
+            const cL = document.getElementById('lineChart').getContext('2d');
+            
+            if(dChart) dChart.destroy(); 
+            if(bChart) bChart.destroy();
+            if(lChart) lChart.destroy();
+
+            // Gráfico de Rosca
+            const catLabels = Object.keys(cats);
+            dChart = new Chart(cD, {
+                type: 'doughnut',
+                data: { 
+                    labels: catLabels, 
+                    datasets: [{ 
+                        data: Object.values(cats), 
+                        backgroundColor: chartColors, 
+                        borderWidth: 0, 
+                        hoverOffset: 15 
+                    }] 
+                },
+                options: { cutout: '82%', plugins: { legend: { display: false } } }
+            });
+
+            // Gerar legenda customizada
+            const legendContainer = document.getElementById('chart-legend');
+            legendContainer.innerHTML = catLabels.map((label, i) => `
+                <div class="flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full" style="background:${chartColors[i % chartColors.length]}"></span>
+                    <span class="text-[9px] font-bold opacity-40 uppercase tracking-tighter truncate">${label}</span>
+                </div>
+            `).join('');
+
+            const lbls = Object.keys(trend).slice(-6);
+
+            // Gráfico de Barras
+            bChart = new Chart(cB, {
+                type: 'bar',
+                data: { 
+                    labels: lbls, 
+                    datasets: [
+                        { label: 'IN', data: lbls.map(l=>trend[l].r), backgroundColor: '#10b981', borderRadius: 4 },
+                        { label: 'OUT', data: lbls.map(l=>trend[l].d), backgroundColor: '#6d28d9', borderRadius: 4 }
+                    ] 
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        y: { display: false }, 
+                        x: { grid: { display: false }, ticks: { color: '#ffffff22', font: { size: 9 } } } 
+                    }, 
+                    plugins: { legend: { display: false } } 
+                }
+            });
+
+            // Gráfico de Linhas Tracejadas
+            lChart = new Chart(cL, {
+                type: 'line',
+                data: {
+                    labels: lbls,
+                    datasets: [
+                        {
+                            label: 'Receita',
+                            data: lbls.map(l=>trend[l].r),
+                            borderColor: '#10b981',
+                            borderDash: [5, 5],
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            tension: 0.4,
+                            fill: false
+                        },
+                        {
+                            label: 'Despesa',
+                            data: lbls.map(l=>trend[l].d),
+                            borderColor: '#ef4444',
+                            borderDash: [5, 5],
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            tension: 0.4,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#ffffff22', font: { size: 8 } } },
+                        x: { grid: { display: false }, ticks: { color: '#ffffff22', font: { size: 9 } } }
+                    },
+                    plugins: { 
+                        legend: { display: true, position: 'top', align: 'end', labels: { color: '#ffffff44', font: { size: 8 }, boxWidth: 8 } } 
+                    }
+                }
+            });
+        }
+
+        function showToast() {
+            const t = document.getElementById('toast'); 
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 4000);
+        }
+
+        const modal = document.getElementById('modal');
+        document.getElementById('openModal').onclick = () => modal.classList.replace('hidden', 'flex');
+        document.getElementById('closeModal').onclick = () => modal.classList.replace('flex', 'hidden');
+        
+        document.getElementById('finance-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save');
+            const original = btn.innerText;
+            btn.disabled = true; 
+            btn.innerText = "Sincronizando...";
+            
+            const payload = {
+                descricao: document.getElementById('descricao').value,
+                valor: document.getElementById('valor').value,
+                tipo: document.getElementById('tipo').value,
+                categoria: document.getElementById('categoria').value,
+                data: new Date().toISOString()
+            };
+
+            try {
+                await fetch(API_URL, { 
+                    method: 'POST', 
+                    mode: 'no-cors', // Dependendo da config do seu AppScript
+                    body: JSON.stringify(payload) 
+                });
+                
+                showToast();
+                e.target.reset(); 
+                modal.classList.replace('flex', 'hidden'); 
+                
+                // Refresh local simulado enquanto o Fetch real não termina (UX)
+                setTimeout(fetchData, 1000);
+            } catch(e) { 
+                alert("Erro na conexão"); 
+            } finally { 
+                btn.disabled = false; 
+                btn.innerText = original; 
+            }
+        };
+
+        document.getElementById('downloadPDF').onclick = () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFillColor(5, 1, 13);
+            doc.rect(0, 0, 210, 297, 'F');
+            doc.setTextColor(139, 92, 246);
+            doc.setFontSize(22);
+            doc.text("REPORT - FINANCEPRO ELITE", 14, 20);
+            doc.autoTable({ 
+                html: '#mainTable', 
+                startY: 30, 
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 4 },
+                headStyles: { fillColor: [139, 92, 246], textColor: 255 }
+            });
+            doc.save("extrato-financepro.pdf");
+        };
+    </script>
+</body>
+</html>
